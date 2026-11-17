@@ -7,7 +7,7 @@ usable with [any language DeepL supports](#use-it-with-your-language).
 
 - Text in **any language → your language**, and your language → a second
   language (default: everything → Turkish, Turkish → English); 100+ languages
-- Pick the languages in a small window: **Ctrl+Super+→**
+- Pick engine (DeepL or free Google) and languages in a small window: **Ctrl+Super+→**
 - Popup sized to the text: small for a word, larger for a paragraph; never
   covers the text you selected
 - Fixes PDF copy artefacts before translating (broken lines, `optimi-⏎zation`)
@@ -45,7 +45,11 @@ then starts it.
 1. Create a free account at <https://www.deepl.com/en/developers> and choose
    **DeepL API Free**.
 2. Copy your key from **Account → API Keys**. Free keys end in `:fx`.
-3. Put it in your config — it stays on your machine, outside this repository:
+3. Press **Ctrl+Super+→**, choose **Engine: DeepL**, paste the key and **Save**.
+   The key is stored only on your machine (`~/.config/selection-translate/config.json`,
+   readable only by you), never in this repository.
+
+Or edit the config by hand:
 
 ```bash
 mkdir -p ~/.config/selection-translate
@@ -60,6 +64,21 @@ The config is re-read on every translation; no restart needed.
 500,000 characters; your account page shows your exact limit). Every character
 you send counts, including spaces. When the quota is used up DeepL stops
 answering until the next month — nothing is charged.
+
+## Engines and automatic fallback
+
+| Engine | Key | Quality |
+|---|---|---|
+| **DeepL** | your free DeepL API key | fluent, context-aware |
+| **Google Translate** | none | older free endpoint, more literal |
+
+Switch any time in the settings window (**Ctrl+Super+→ → Engine**). Your DeepL
+key is kept when you switch to Google, so switching back is one click.
+
+**Automatic fallback:** if DeepL stops answering because the monthly limit is
+used up or the key is rejected, the translation is done by Google instead and
+the popup header warns you in orange, e.g. `EN → TR · Google · DeepL limit reached`.
+When the new month starts, DeepL is used again automatically.
 
 ## Use it with your language
 
@@ -102,7 +121,8 @@ codes from DeepL's
 - **Copy** copies the translation; you can also select text inside the popup.
 - On / off: **Ctrl+Super+↑ / ↓**, the Activities launchers, or
   `python3 selection_translate.py --on | --off`. A notification confirms.
-- Languages: **Ctrl+Super+→** or `python3 selection_translate.py --settings`.
+- Settings (engine, key, languages): **Ctrl+Super+→** or
+  `python3 selection_translate.py --settings`.
 
 ## Configuration
 
@@ -146,7 +166,7 @@ python3 -m pytest -q
 | `placement.py` | popup size and position |
 | `input_rules.py` | mouse-vs-keyboard, selection bounds, ignored apps |
 | `languages.py` | language list (live from DeepL or built-in) and saving the choice |
-| `settings_window.py` | the Languages window (Ctrl+Super+→) |
+| `settings_window.py` | the settings window (Ctrl+Super+→): engine, key, languages |
 
 ## License
 

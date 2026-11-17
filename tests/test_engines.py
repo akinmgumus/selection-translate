@@ -198,3 +198,57 @@ def test_deepl_target_codes():
 def test_languages_default_to_turkish_and_english(fake_get):
     t = translate_auto("Hello", {"engine": "google"})
     assert t.target == "tr"
+
+
+@pytest.fixture
+def deepl_status(monkeypatch):
+    """DeepL answers with a given HTTP status (set .status before translating)."""
+    class State:
+        status = 456
+
+    def post(url, data=None, headers=None, timeout=None, **kw):
+        return FakeResponse(status=State.status, text="err")
+
+    monkeypatch.setattr(engines.requests, "post", post)
+    return State
+
+
+DEEPL_CFG = {"engine": "deepl", "deepl_key": "k:fx", "my_language": "tr", "second_language": "en"}
+
+
+def test_deepl_quota_used_up_falls_back_to_google_with_warning(deepl_status, fake_get):
+    deepl_status.status = 456
+    t = translate_auto("Hello", DEEPL_CFG)
+    assert t.engine == "google"
+    assert "limit" in t.notice.lower()
+    assert t.text == "Merhaba"
+
+
+def test_deepl_key_rejected_falls_back_to_google_with_warning(deepl_status, fake_get):
+    deepl_status.status = 403
+    t = translate_auto("Hello", DEEPL_CFG)
+    assert t.engine == "google"
+    assert "key" in t.notice.lower()
+
+
+def test_deepl_other_error_does_not_fall_back(deepl_status, fake_get):
+    deepl_status.status = 500
+    with pytest.raises(TranslateError):
+        translate_auto("Hello", DEEPL_CFG)
+    assert fake_get == []
+
+
+def test_normal_deepl_result_has_no_warning(fake_post):
+    t = translate_auto("Hello", DEEPL_CFG)
+    assert (t.engine, t.notice) == ("deepl", "")
+
+
+def test_deepl_chosen_without_key_uses_google_with_warning(fake_get):
+    t = translate_auto("Hello", {"engine": "deepl", "deepl_key": ""})
+    assert t.engine == "google"
+    assert "key" in t.notice.lower()
+
+
+def test_google_chosen_has_no_warning(fake_get):
+    t = translate_auto("Hello", {"engine": "google"})
+    assert (t.engine, t.notice) == ("google", "")

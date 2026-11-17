@@ -45,6 +45,7 @@ CSS = b"""
 .st-header { font-size: 85%; font-weight: bold; color: @insensitive_fg_color; }
 .st-body { font-size: 110%; padding: 2px 4px 6px 4px; }
 .st-error { color: @error_color; }
+.st-warning { color: @warning_color; }
 .st-popup button { padding: 0 6px; min-height: 0; min-width: 0; }
 """
 
@@ -70,7 +71,7 @@ class Popup(Gtk.Window):
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin=MARGIN)
         header = self.header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        self.lang = Gtk.Label(xalign=0)
+        self.lang = Gtk.Label(xalign=0, wrap=True)  # wraps if a fallback warning is shown
         self.lang.get_style_context().add_class("st-header")
         self.copy_btn = Gtk.Button(label="Copy", relief=Gtk.ReliefStyle.NONE)
         self.copy_btn.connect("clicked", self._copy)
@@ -98,12 +99,17 @@ class Popup(Gtk.Window):
         self.lang.set_text("…")
         self._set_body("Translating…", error=False)
 
-    def show_result(self, text: str, source: str, target: str) -> None:
-        self.lang.set_text(f"{source.upper()} → {target.upper()}")
+    def show_result(self, text: str, source: str, target: str, note: str = "") -> None:
+        # note: fallback warning, e.g. "Google · DeepL limit reached" (shown in orange)
+        header = f"{source.upper()} → {target.upper()}"
+        self.lang.set_text(f"{header}  ·  {note}" if note else header)
+        ctx = self.lang.get_style_context()
+        (ctx.add_class if note else ctx.remove_class)("st-warning")
         self._width = max(self._width, popup_width(text))
         self._set_body(text, error=False)
 
     def show_error(self, message: str) -> None:
+        self.lang.get_style_context().remove_class("st-warning")
         self.lang.set_text("Error")
         self._set_body(message, error=True)
 
@@ -338,7 +344,8 @@ class App:
             self.popup.show_error(error)
         else:
             log(f"#{rid} {result.source} → {result.target}: {result.text[:80]!r}")
-            self.popup.show_result(result.text, result.source, result.target)
+            note = f"Google · {result.notice}" if result.notice else ""
+            self.popup.show_result(result.text, result.source, result.target, note=note)
         return False  # run once
 
     def _on_popup_closed(self):

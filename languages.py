@@ -58,8 +58,10 @@ def fetch_languages(config: dict, timeout: float = 3.0) -> list[tuple[str, str]]
     return dedupe(FALLBACK_LANGUAGES)
 
 
-def save_languages(mine: str, second: str, path: Path = CONFIG_PATH) -> None:
-    """Write my_language / second_language, keeping every other setting (and the key)."""
+def save_languages(mine: str, second: str, path: Path = CONFIG_PATH,
+                   extra: dict | None = None) -> None:
+    """Write my_language / second_language (plus any `extra` settings, e.g. engine
+    and key), keeping every other setting already in the file."""
     if base_language(mine) == base_language(second):
         raise ValueError("My language and second language must be different.")
     path = Path(path)
@@ -71,6 +73,7 @@ def save_languages(mine: str, second: str, path: Path = CONFIG_PATH) -> None:
         config = {}
     config["my_language"] = mine
     config["second_language"] = second
+    config.update(extra or {})
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)

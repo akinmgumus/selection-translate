@@ -172,3 +172,40 @@ def test_settings_window_refuses_same_language(tmp_path):
     assert not cfg.exists()
     assert w.error.get_text() != ""
     w.destroy()
+
+
+def test_popup_shows_fallback_warning():
+    p = st.Popup(on_closed=lambda: None)
+    p.show_loading("hello", -10000, -10000, -10000)
+    p.show_result("Merhaba", "en", "tr", note="Google · DeepL limit reached")
+    assert "DeepL limit reached" in p.lang.get_text()
+    p.destroy()
+
+
+def test_settings_window_switches_engine_and_keeps_key(tmp_path):
+    import json
+    import settings_window
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"engine": "deepl", "deepl_key": "secret:fx"}))
+    langs = [("en-us", "English (American)"), ("tr", "Turkish")]
+    w = settings_window.SettingsWindow(config_path=cfg, languages=langs)
+    assert w.engine.get_active_id() == "deepl"
+    assert w.key.get_text() == "secret:fx"
+    w.engine.set_active_id("google")
+    assert not w.key.get_visible()            # key field hidden for Google
+    assert w.save() is True
+    data = json.loads(cfg.read_text())
+    assert (data["engine"], data["deepl_key"]) == ("google", "secret:fx")  # key kept
+    w.destroy()
+
+
+def test_settings_window_requires_key_for_deepl(tmp_path):
+    import settings_window
+    cfg = tmp_path / "config.json"
+    w = settings_window.SettingsWindow(config_path=cfg, languages=[("en-us", "English"), ("tr", "Turkish")])
+    w.engine.set_active_id("deepl")
+    w.key.set_text("  ")
+    assert w.save() is False
+    assert "key" in w.error.get_text().lower()
+    assert not cfg.exists()
+    w.destroy()

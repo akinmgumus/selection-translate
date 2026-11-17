@@ -85,3 +85,10 @@ def test_save_creates_missing_config(tmp_path):
 def test_same_language_twice_is_rejected(tmp_path):
     with pytest.raises(ValueError):
         save_languages("en-us", "en-gb", tmp_path / "config.json")
+
+
+def test_save_can_also_write_engine_and_key(tmp_path):
+    cfg = tmp_path / "config.json"
+    save_languages("tr", "en-us", cfg, extra={"engine": "deepl", "deepl_key": "new:fx"})
+    data = json.loads(cfg.read_text())
+    assert (data["engine"], data["deepl_key"]) == ("deepl", "new:fx")

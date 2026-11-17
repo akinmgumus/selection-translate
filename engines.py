@@ -28,11 +28,20 @@ class TranslateError(Exception):
     """Any failure to get a translation (network, HTTP status, bad response)."""
 
 
+class DeepLUnavailable(TranslateError):
+    """DeepL refused this account: monthly quota used up (456) or key rejected (403)."""
+
+
+DEEPL_FALLBACK_NOTICES = {456: "DeepL limit reached", 403: "DeepL key rejected"}
+
+
 @dataclass
 class Translation:
     text: str    # the translated text
     source: str  # detected source language, e.g. "en"
     target: str  # language translated into, e.g. "tr"
+    engine: str = ""   # engine that produced it: "deepl" or "google"
+    notice: str = ""   # warning for the popup, e.g. "DeepL limit reached"
 
 
 def base_language(code: str) -> str:
@@ -77,6 +86,8 @@ def deepl_translate(text: str, target: str, key: str, timeout: float = 8.0) -> t
         resp = requests.post(url, data=data, headers=headers, timeout=timeout)
     except requests.RequestException as exc:
         raise TranslateError(f"Network error: {exc.__class__.__name__}") from exc
+    if resp.status_code in DEEPL_FALLBACK_NOTICES:
+        raise DeepLUnavailable(DEEPL_FALLBACK_NOTICES[resp.status_code])
     if resp.status_code != 200:
         raise TranslateError(f"DeepL returned HTTP {resp.status_code}")
     try:
@@ -86,19 +97,36 @@ def deepl_translate(text: str, target: str, key: str, timeout: float = 8.0) -> t
         raise TranslateError("Unexpected response from DeepL") from exc
 
 
-def translate_auto(text: str, config: dict) -> Translation:
-    """Translate into my_language; if the text already is my_language, into second_language."""
-    mine = config.get("my_language") or DEFAULT_CONFIG["my_language"]
-    second = config.get("second_language") or DEFAULT_CONFIG["second_language"]
-    if config.get("engine") == "deepl" and config.get("deepl_key"):
-        engine = lambda t, tgt: deepl_translate(t, tgt, config["deepl_key"])
-    else:
-        engine = google_translate
+def _two_way(engine, text: str, mine: str, second: str) -> Translation:
+    """Into `mine`; if the text already is `mine`, into `second`."""
     translated, source = engine(text, mine)
     if source == base_language(mine):
         translated, _ = engine(text, second)
         return Translation(translated, source, second.lower())
     return Translation(translated, source, mine.lower())
+
+
+def translate_auto(text: str, config: dict) -> Translation:
+    """Translate with the configured engine; fall back to Google (with a notice)
+    when DeepL has no key, its quota is used up, or the key is rejected."""
+    mine = config.get("my_language") or DEFAULT_CONFIG["my_language"]
+    second = config.get("second_language") or DEFAULT_CONFIG["second_language"]
+    notice = ""
+    if config.get("engine") == "deepl":
+        key = (config.get("deepl_key") or "").strip()
+        if key:
+            deepl = lambda t, tgt: deepl_translate(t, tgt, key)
+            try:
+                result = _two_way(deepl, text, mine, second)
+                result.engine = "deepl"
+                return result
+            except DeepLUnavailable as exc:
+                notice = str(exc)
+        else:
+            notice = "no DeepL key set"
+    result = _two_way(google_translate, text, mine, second)
+    result.engine, result.notice = "google", notice
+    return result
 
 
 def load_config(path: Path = CONFIG_PATH) -> dict:

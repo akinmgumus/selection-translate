@@ -1,4 +1,4 @@
-"""Small window to choose my_language and second_language (Ctrl+Super+Right)."""
+"""Settings window (Ctrl+Super+Right): engine, DeepL key, my/second language."""
 import subprocess
 from pathlib import Path
 
@@ -13,11 +13,13 @@ from languages import fetch_languages, normalize_code, save_languages  # noqa: E
 HELP = ("Text in any language is translated into <b>My language</b>.\n"
         "Text already in My language is translated into <b>Second language</b>.")
 
+ENGINES = (("deepl", "DeepL (API key)"), ("google", "Google Translate (free, no key)"))
+
 
 class SettingsWindow(Gtk.Window):
     def __init__(self, config_path: Path = CONFIG_PATH,
                  languages: list[tuple[str, str]] | None = None):
-        super().__init__(title="Selection Translate — Languages")
+        super().__init__(title="Selection Translate — Settings")
         self.config_path = Path(config_path)
         config = load_config(self.config_path)
         self.names = {}
@@ -34,16 +36,32 @@ class SettingsWindow(Gtk.Window):
         help_label.set_markup(HELP)
         grid.attach(help_label, 0, 0, 2, 1)
 
+        self.engine = Gtk.ComboBoxText()
+        for engine_id, label in ENGINES:
+            self.engine.append(engine_id, label)
+        self.engine.set_active_id("deepl" if config.get("engine") == "deepl" else "google")
+        self.key = Gtk.Entry(visibility=False, width_chars=38,
+                             placeholder_text="your DeepL API key (Free keys end in :fx)")
+        self.key.set_text(config.get("deepl_key") or "")
+        self.key_label = Gtk.Label(label="DeepL API key:", xalign=1)
+        for widget in (self.key, self.key_label):
+            widget.set_no_show_all(True)  # shown only while DeepL is selected
+        self.engine.connect("changed", lambda *_: self._update_key_row())
+        self._update_key_row()
+
         self.mine = self._combo(langs, config["my_language"])
         self.second = self._combo(langs, config["second_language"])
-        grid.attach(Gtk.Label(label="My language:", xalign=1), 0, 1, 1, 1)
-        grid.attach(self.mine, 1, 1, 1, 1)
-        grid.attach(Gtk.Label(label="Second language:", xalign=1), 0, 2, 1, 1)
-        grid.attach(self.second, 1, 2, 1, 1)
+        rows = (("Engine:", self.engine), (self.key_label, self.key),
+                ("My language:", self.mine), ("Second language:", self.second))
+        for row, (label, widget) in enumerate(rows, start=1):
+            if isinstance(label, str):
+                label = Gtk.Label(label=label, xalign=1)
+            grid.attach(label, 0, row, 1, 1)
+            grid.attach(widget, 1, row, 1, 1)
 
         self.error = Gtk.Label(xalign=0)
         self.error.get_style_context().add_class("error")
-        grid.attach(self.error, 0, 3, 2, 1)
+        grid.attach(self.error, 0, 5, 2, 1)
 
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         cancel = Gtk.Button(label="Cancel")
@@ -53,7 +71,7 @@ class SettingsWindow(Gtk.Window):
         save.connect("clicked", self._on_save_clicked)
         buttons.pack_start(cancel, False, False, 0)
         buttons.pack_start(save, False, False, 0)
-        grid.attach(buttons, 0, 4, 2, 1)
+        grid.attach(buttons, 0, 6, 2, 1)
 
         self.add(grid)
         self.connect("key-press-event", self._on_key)
@@ -68,14 +86,27 @@ class SettingsWindow(Gtk.Window):
             combo.set_active_id(base_language(current))
         return combo
 
+    def _update_key_row(self) -> None:
+        deepl = self.engine.get_active_id() == "deepl"
+        self.key.set_visible(deepl)
+        self.key_label.set_visible(deepl)
+
     def save(self) -> bool:
-        """Write the chosen languages; False (with a message) if not possible."""
+        """Write engine, key and languages; False (with a message) if not possible."""
         mine, second = self.mine.get_active_id(), self.second.get_active_id()
         if not mine or not second:
             self.error.set_text("Please choose both languages.")
             return False
+        engine = self.engine.get_active_id()
+        extra = {"engine": engine}
+        if engine == "deepl":
+            key = self.key.get_text().strip()
+            if not key:
+                self.error.set_text("Enter your DeepL API key, or choose Google Translate.")
+                return False
+            extra["deepl_key"] = key  # for Google the stored key is kept, not erased
         try:
-            save_languages(mine, second, self.config_path)
+            save_languages(mine, second, self.config_path, extra=extra)
         except (ValueError, OSError) as exc:
             self.error.set_text(str(exc))
             return False
@@ -85,7 +116,8 @@ class SettingsWindow(Gtk.Window):
         if self.save():
             mine = self.names.get(self.mine.get_active_id(), self.mine.get_active_id())
             second = self.names.get(self.second.get_active_id(), self.second.get_active_id())
-            notify(f"Everything → {mine}, {mine} → {second}")
+            engine = dict(ENGINES)[self.engine.get_active_id()].split(" (")[0]
+            notify(f"{engine}: everything → {mine}, {mine} → {second}")
             self.destroy()
 
     def _on_key(self, _widget, event) -> bool:
