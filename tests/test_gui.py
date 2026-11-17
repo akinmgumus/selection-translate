@@ -144,3 +144,31 @@ def test_selection_claimed_at_release_before_poll_noticed_is_mouse():
     app._on_selection_changed(app.primary, None)
     assert app.pending
     app.popup.destroy()
+
+
+def test_settings_window_preselects_and_saves(tmp_path):
+    import json
+    import settings_window
+    cfg = tmp_path / "config.json"
+    cfg.write_text(json.dumps({"deepl_key": "secret:fx", "my_language": "tr", "second_language": "en"}))
+    langs = [("de", "German"), ("en-us", "English (American)"), ("tr", "Turkish")]
+    w = settings_window.SettingsWindow(config_path=cfg, languages=langs)
+    assert w.mine.get_active_id() == "tr"
+    assert w.second.get_active_id() == "en-us"      # "en" in config shown as English (American)
+    w.mine.set_active_id("de")
+    assert w.save() is True
+    data = json.loads(cfg.read_text())
+    assert (data["my_language"], data["second_language"], data["deepl_key"]) == ("de", "en-us", "secret:fx")
+    w.destroy()
+
+
+def test_settings_window_refuses_same_language(tmp_path):
+    import settings_window
+    cfg = tmp_path / "config.json"
+    w = settings_window.SettingsWindow(config_path=cfg, languages=[("tr", "Turkish"), ("en-us", "English")])
+    w.mine.set_active_id("tr")
+    w.second.set_active_id("tr")
+    assert w.save() is False
+    assert not cfg.exists()
+    assert w.error.get_text() != ""
+    w.destroy()

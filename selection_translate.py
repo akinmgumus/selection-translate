@@ -6,6 +6,7 @@ that language goes to `second_language` (default English). See README.
 Run:  python3 selection_translate.py [--debug]   start (stays in the background)
       python3 selection_translate.py --on          turn on (starts it if not running)
       python3 selection_translate.py --off         turn off (pause; no popups)
+      python3 selection_translate.py --settings    choose languages
 """
 import ctypes
 import ctypes.util
@@ -389,6 +390,9 @@ def notify(message: str) -> None:
 def main(argv: list[str]) -> int:
     global DEBUG
     DEBUG = "--debug" in argv
+    if "--settings" in argv:
+        import settings_window
+        return settings_window.run()
     pid = running_pid()
     if "--off" in argv:
         if pid:

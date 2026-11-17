@@ -5,8 +5,9 @@ a terminal, an editor — and a small popup shows its translation right under
 the selection. Built for reading English technical papers in Turkish — and
 usable with [any language DeepL supports](#use-it-with-your-language).
 
-- **English → Turkish**, and **Turkish → English**, detected automatically
-  (or German ⇄ English, Danish ⇄ English, … — see below)
+- Text in **any language → your language**, and your language → a second
+  language (default: everything → Turkish, Turkish → English); 100+ languages
+- Pick the languages in a small window: **Ctrl+Super+→**
 - Popup sized to the text: small for a word, larger for a paragraph; never
   covers the text you selected
 - Fixes PDF copy artefacts before translating (broken lines, `optimi-⏎zation`)
@@ -35,8 +36,9 @@ cd selection-translate
 ./install.sh
 ```
 
-This adds an autostart entry (it starts at login), "Selection Translate: On/Off"
-launchers in the Activities search, and the keyboard shortcuts, then starts it.
+This adds an autostart entry (it starts at login), "Selection Translate" On/Off
+and Languages launchers in the Activities search, and the keyboard shortcuts,
+then starts it.
 
 ## DeepL API key (recommended)
 
@@ -61,36 +63,37 @@ answering until the next month — nothing is charged.
 
 ## Use it with your language
 
-Out of the box everything is translated into **Turkish**, and Turkish text into
-**English**. To use your own languages, set two values in
-`~/.config/selection-translate/config.json`:
+It works with **every language DeepL supports** (100+); Turkish is only the
+default. Two settings decide the direction:
 
-- `my_language` — the language you read in; every selection is translated into it
-- `second_language` — used when the selected text already *is* in `my_language`
+- **My language** — every selection, in any language, is translated into it
+- **Second language** — used when the selected text already *is* in My language
 
-| You are… | `my_language` | `second_language` | Result |
-|---|---|---|---|
-| Turkish (default) | `"tr"` | `"en"` | EN→TR, TR→EN |
-| German | `"de"` | `"en"` | EN→DE, DE→EN |
-| Danish | `"da"` | `"en"` | EN→DA, DA→EN |
-| Dutch, prefers British English | `"nl"` | `"en-gb"` | EN→NL, NL→EN (UK) |
+Press **Ctrl+Super+→** (or open **"Selection Translate: Languages"** from the
+Activities search), pick both languages, and **Save**. No restart needed.
 
-For example, a German reader:
-
-```json
-{
-  "engine": "deepl",
-  "deepl_key": "YOUR-DEEPL-API-KEY:fx",
-  "my_language": "de",
-  "second_language": "en"
-}
+```
+┌ Selection Translate — Languages ─────────┐
+│ My language:       [ Turkish          ▾ ] │
+│ Second language:   [ English (American)▾ ] │
+│                         [Cancel] [Save]   │
+└───────────────────────────────────────────┘
 ```
 
-Use the language codes from DeepL's
+Examples (the window lists every available language — these are only examples):
+
+| You are… | My language | Second language | Result |
+|---|---|---|---|
+| Turkish (default) | Turkish | English | anything → TR, TR → EN |
+| German | German | English | anything → DE, DE → EN |
+| Japanese | Japanese | English (British) | anything → JA, JA → EN-GB |
+
+The list comes live from DeepL when a key is set, otherwise from a built-in
+copy. You can also set `my_language` / `second_language` in `config.json` with
+codes from DeepL's
 [supported languages list](https://developers.deepl.com/docs/getting-started/supported-languages)
-(`de`, `da`, `fr`, `es`, `nl`, `pl`, `ja`, …). Plain `en` means American English
-and `pt` Brazilian Portuguese; write `en-gb` or `pt-pt` for the other variant.
-The same codes work with the Google fallback.
+(`de`, `ja`, `en-gb`, `pt-pt`, …). If DeepL does not support your language, set
+`"engine": "google"`.
 
 ## Usage
 
@@ -99,6 +102,7 @@ The same codes work with the Google fallback.
 - **Copy** copies the translation; you can also select text inside the popup.
 - On / off: **Ctrl+Super+↑ / ↓**, the Activities launchers, or
   `python3 selection_translate.py --on | --off`. A notification confirms.
+- Languages: **Ctrl+Super+→** or `python3 selection_translate.py --settings`.
 
 ## Configuration
 
@@ -141,6 +145,8 @@ python3 -m pytest -q
 | `textclean.py` | PDF text clean-up and "worth translating?" filter |
 | `placement.py` | popup size and position |
 | `input_rules.py` | mouse-vs-keyboard, selection bounds, ignored apps |
+| `languages.py` | language list (live from DeepL or built-in) and saving the choice |
+| `settings_window.py` | the Languages window (Ctrl+Super+→) |
 
 ## License
 
