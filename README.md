@@ -39,8 +39,7 @@ launchers in the Activities search, and the keyboard shortcuts, then starts it.
 ## DeepL API key (recommended)
 
 1. Create a free account at <https://www.deepl.com/en/developers> and choose
-   **DeepL API Free** (a card is asked for verification only; the Free plan is
-   never charged).
+   **DeepL API Free**.
 2. Copy your key from **Account → API Keys**. Free keys end in `:fx`.
 3. Put it in your config — it stays on your machine, outside this repository:
 
