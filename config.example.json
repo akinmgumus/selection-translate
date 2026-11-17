@@ -1,0 +1,5 @@
+{
+  "engine": "deepl",
+  "deepl_key": "YOUR-DEEPL-API-KEY:fx",
+  "ignore_apps": ["firefox"]
+}

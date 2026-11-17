@@ -1,0 +1,8 @@
+# Never commit API keys: the real config lives in ~/.config/selection-translate/
+config.json
+*.key
+.env
+
+__pycache__/
+*.pyc
+.pytest_cache/
