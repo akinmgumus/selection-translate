@@ -6,7 +6,7 @@ import pytest
 import requests
 
 import engines
-from engines import TranslateError, google_translate, load_config, translate_auto
+from engines import TranslateError, deepl_target_code, google_translate, load_config, translate_auto
 
 
 class FakeResponse:
@@ -28,6 +28,9 @@ def _google_reply(params):
         detected = "tr"
         out = "Hello" if tl == "en" else q
         return FakeResponse(payload=[[[out, q]], None, detected])
+    if "Guten" in q:
+        out = "Good day" if tl == "en" else q
+        return FakeResponse(payload=[[[out, q]], None, "de"])
     if q == "Hello world":
         return FakeResponse(payload=[[["Merhaba ", "Hello "], ["dünya", "world"]], None, "en"])
     return FakeResponse(payload=[[["Merhaba", q]], None, "en"])
@@ -152,11 +155,46 @@ def test_deepl_used_when_configured(fake_post):
 
 
 def test_load_config_defaults_when_missing(tmp_path):
-    assert load_config(tmp_path / "nope.json") == {"engine": "google", "deepl_key": "",
-                                                   "ignore_apps": ["firefox"]}
+    assert load_config(tmp_path / "nope.json") == {
+        "engine": "google", "deepl_key": "", "ignore_apps": ["firefox"],
+        "my_language": "tr", "second_language": "en"}
 
 
 def test_load_config_keeps_default_ignore_list_when_not_set(tmp_path):
     f = tmp_path / "c.json"
     f.write_text('{"engine": "deepl", "deepl_key": "k:fx"}')
     assert load_config(f)["ignore_apps"] == ["firefox"]
+
+
+def test_german_reader_gets_german(fake_get):
+    cfg = {"engine": "google", "my_language": "de", "second_language": "en"}
+    t = translate_auto("Hello", cfg)
+    assert (t.source, t.target) == ("en", "de")
+    assert [c["tl"] for c in fake_get] == ["de"]
+
+
+def test_german_text_goes_to_second_language(fake_get):
+    cfg = {"engine": "google", "my_language": "de", "second_language": "en"}
+    t = translate_auto("Guten Tag", cfg)
+    assert (t.text, t.source, t.target) == ("Good day", "de", "en")
+    assert [c["tl"] for c in fake_get] == ["de", "en"]
+
+
+def test_danish_reader_with_deepl(fake_post):
+    cfg = {"engine": "deepl", "deepl_key": "k:fx", "my_language": "da", "second_language": "en"}
+    t = translate_auto("Hello", cfg)
+    assert fake_post["data"]["target_lang"] == "DA"
+    assert (t.source, t.target) == ("en", "da")
+
+
+def test_deepl_target_codes():
+    assert deepl_target_code("en") == "EN-US"
+    assert deepl_target_code("en-gb") == "EN-GB"
+    assert deepl_target_code("pt") == "PT-BR"
+    assert deepl_target_code("de") == "DE"
+    assert deepl_target_code("TR") == "TR"
+
+
+def test_languages_default_to_turkish_and_english(fake_get):
+    t = translate_auto("Hello", {"engine": "google"})
+    assert t.target == "tr"

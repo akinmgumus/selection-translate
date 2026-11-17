@@ -2,9 +2,11 @@
 
 Select text with the mouse anywhere on your Linux desktop — a PDF in Evince,
 a terminal, an editor — and a small popup shows its translation right under
-the selection. Built for reading English technical papers in Turkish.
+the selection. Built for reading English technical papers in Turkish — and
+usable with [any language DeepL supports](#use-it-with-your-language).
 
 - **English → Turkish**, and **Turkish → English**, detected automatically
+  (or German ⇄ English, Danish ⇄ English, … — see below)
 - Popup sized to the text: small for a word, larger for a paragraph; never
   covers the text you selected
 - Fixes PDF copy artefacts before translating (broken lines, `optimi-⏎zation`)
@@ -57,6 +59,39 @@ The config is re-read on every translation; no restart needed.
 you send counts, including spaces. When the quota is used up DeepL stops
 answering until the next month — nothing is charged.
 
+## Use it with your language
+
+Out of the box everything is translated into **Turkish**, and Turkish text into
+**English**. To use your own languages, set two values in
+`~/.config/selection-translate/config.json`:
+
+- `my_language` — the language you read in; every selection is translated into it
+- `second_language` — used when the selected text already *is* in `my_language`
+
+| You are… | `my_language` | `second_language` | Result |
+|---|---|---|---|
+| Turkish (default) | `"tr"` | `"en"` | EN→TR, TR→EN |
+| German | `"de"` | `"en"` | EN→DE, DE→EN |
+| Danish | `"da"` | `"en"` | EN→DA, DA→EN |
+| Dutch, prefers British English | `"nl"` | `"en-gb"` | EN→NL, NL→EN (UK) |
+
+For example, a German reader:
+
+```json
+{
+  "engine": "deepl",
+  "deepl_key": "YOUR-DEEPL-API-KEY:fx",
+  "my_language": "de",
+  "second_language": "en"
+}
+```
+
+Use the language codes from DeepL's
+[supported languages list](https://developers.deepl.com/docs/getting-started/supported-languages)
+(`de`, `da`, `fr`, `es`, `nl`, `pl`, `ja`, …). Plain `en` means American English
+and `pt` Brazilian Portuguese; write `en-gb` or `pt-pt` for the other variant.
+The same codes work with the Google fallback.
+
 ## Usage
 
 - Select a word, sentence or paragraph **with the mouse** and release.
@@ -74,6 +109,8 @@ answering until the next month — nothing is charged.
 | `engine` | `"deepl"` or `"google"` | `"google"` |
 | `deepl_key` | your DeepL API key | — |
 | `ignore_apps` | apps where selections are ignored (matched against the window's class name, e.g. `firefox`, `code`) | `["firefox"]` |
+| `my_language` | language every selection is translated into | `"tr"` |
+| `second_language` | target when the text is already in `my_language` | `"en"` |
 
 ## Troubleshooting
 
@@ -100,7 +137,7 @@ python3 -m pytest -q
 | File | Role |
 |---|---|
 | `selection_translate.py` | GTK app: watches the selection, mouse and Esc; shows the popup |
-| `engines.py` | DeepL / Google calls and EN⇄TR direction |
+| `engines.py` | DeepL / Google calls and the two-language direction |
 | `textclean.py` | PDF text clean-up and "worth translating?" filter |
 | `placement.py` | popup size and position |
 | `input_rules.py` | mouse-vs-keyboard, selection bounds, ignored apps |

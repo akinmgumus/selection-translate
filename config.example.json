@@ -1,5 +1,7 @@
 {
   "engine": "deepl",
   "deepl_key": "YOUR-DEEPL-API-KEY:fx",
+  "my_language": "tr",
+  "second_language": "en",
   "ignore_apps": ["firefox"]
 }

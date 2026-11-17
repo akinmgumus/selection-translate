@@ -15,7 +15,7 @@ write_desktop() {  # <file> <name> <args> <extra lines>
 [Desktop Entry]
 Type=Application
 Name=$2
-Comment=Translate selected text (EN <-> TR) in a popup
+Comment=Translate selected text in a popup
 Exec=$PY "$APP" $3
 Icon=accessories-dictionary
 Terminal=false

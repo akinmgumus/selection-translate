@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Selection Translate: select text anywhere (e.g. a PDF in Evince) and a popup
-shows its translation. English/other -> Turkish, Turkish -> English.
+shows its translation into `my_language` (default Turkish); text already in
+that language goes to `second_language` (default English). See README.
 
 Run:  python3 selection_translate.py [--debug]   start (stays in the background)
       python3 selection_translate.py --on          turn on (starts it if not running)
