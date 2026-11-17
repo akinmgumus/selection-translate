@@ -130,3 +130,17 @@ def test_selection_in_firefox_is_ignored():
     app._on_selection_changed(app.primary, None)
     assert not app.pending
     app.popup.destroy()
+
+
+def test_selection_claimed_at_release_before_poll_noticed_is_mouse():
+    # Drag in Evince: the app claims the selection the instant the button goes
+    # up. X already reports "no button", and our 25 ms poll last saw the button
+    # held and has not recorded the release yet.
+    app = st.App()
+    app.x11 = FakeX11("Evince")
+    app.root = FakeRoot(mask=0)
+    app.button_was_down = True
+    app.last_release_at = None
+    app._on_selection_changed(app.primary, None)
+    assert app.pending
+    app.popup.destroy()

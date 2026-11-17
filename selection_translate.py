@@ -257,8 +257,13 @@ class App:
             log(f"pointer query failed: {exc!r}")
             return
         now = time.monotonic()
-        if not is_mouse_selection(bool(mask & BUTTONS), now, self.last_release_at):
-            log("ignored keyboard selection")
+        # Apps like Evince claim a dragged selection the instant the button goes
+        # up, before our 25 ms poll records the release. If the last poll still
+        # saw a button held, the release just happened: count it as the mouse.
+        held = bool(mask & BUTTONS) or self.button_was_down
+        if not is_mouse_selection(held, now, self.last_release_at):
+            log(f"ignored keyboard selection (button now={bool(mask & BUTTONS)}, "
+                f"poll saw held={self.button_was_down}, last release={self.last_release_at})")
             return
         window_class = self.x11.active_window_class()
         if is_ignored_app(window_class, load_config()["ignore_apps"]):
